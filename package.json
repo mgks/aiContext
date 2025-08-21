@@ -1,0 +1,35 @@
+{
+  "name": "aicontext",
+  "version": "0.1.0",
+  "description": "A CLI tool for generating high-signal, optimized code context for AI assistants and automation.",
+  "main": "aicontext.js",
+  "bin": {
+    "aicontext": "./aicontext.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mgks/aicontext.git"
+  },
+  "keywords": [
+    "ai",
+    "context",
+    "automation",
+    "llm",
+    "dev-tools",
+    "cli",
+    "gpt",
+    "claude"
+  ],
+  "author": "Ghazi Khan (mgks.dev)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mgks/aicontext/issues"
+  },
+  "homepage": "https://github.com/mgks/aicontext#readme",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
+}

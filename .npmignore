@@ -1,0 +1,8 @@
+# Exclude development and project-specific files
+.github/
+.gitignore
+context.md
+.DS_Store
+
+# Exclude local configs if you have any
+aicontext.json
