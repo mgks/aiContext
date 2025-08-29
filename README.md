@@ -1,7 +1,7 @@
 # aiContext
 
 [![NPM Version](https://img.shields.io/npm/v/aicontext.svg)](https://www.npmjs.com/package/aicontext)
-[![License](https://img.shields.io/npm/l/aicontext.svg)](https://github.com/your-username/aicontext/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/aicontext.svg)](https://github.com/mgks/aiContext/blob/main/LICENSE)
 
 A powerful CLI tool for generating high-signal, optimized code context for AI assistants and automated systems.
 
@@ -10,10 +10,11 @@ A powerful CLI tool for generating high-signal, optimized code context for AI as
 ## Key Features
 
 -   🤖 **AI-Ready Context**: Generates clean, structured context perfect for LLMs.
--   ⚙️ **Persistent Configuration**: Uses a `aicontext.json` file for reproducible context generation.
+-   ⚙️ **Persistent Configuration**: Uses an `aicontext.json` file for reproducible context generation.
 -   🧩 **Additive Presets**: Start with a solid baseline and layer on presets for technologies like `nodejs`, `python`, `rust`, and more.
 -   📄 **`.gitignore` Aware**: Can automatically use your project's `.gitignore` file for exclusions.
 -   🔧 **Granular Control**: Fine-tune your context with specific flags to add or remove files and extensions.
+-   🎯 **Force Inclusion**: A new `--include` flag to grab specific files or directories, even if they are hidden (e.g., `.github/`).
 
 ## Quick Start
 
@@ -42,18 +43,21 @@ aicontext --exclude 'docs/' --ext swift
 
 ### Options
 
-| Flag                 | Alias | Description                                        | Type    |
-| -------------------- | ----- | -------------------------------------------------- | ------- |
-| `--preset`           | `-p`  | Use a preset (`nodejs`, `android`, `java`)         | string  |
-| `--include`          | `-i`  | Specific paths to include.                         | array   |
-| `--exclude`          | `-e`  | Additional paths or patterns to exclude.           | array   |
-| `--ext`              |       | Additional file extensions to include.             | array   |
-| `--output`           | `-o`  | Name of the output markdown file.                  | string  |
-| `--max-size`         |       | Maximum file size in KB to include.                | number  |
-| `--debug`            |       | Enable debug mode to show the `find` command.      | boolean |
-| `--help`             | `-h`  | Show help.                                         |         |
+| Flag               | Alias | Description                                                                  |
+| ------------------ | ----- | ---------------------------------------------------------------------------- |
+| `--preset`         | `-p`  | Applies one or more technology presets (e.g., `nodejs`, `python`).           |
+| `--include`        | `-i`  | Forcefully includes a path, even if it's hidden (e.g., `.github/`).          |
+| `--add-exclude`    | `-a`  | Adds a path or pattern to the exclusion list (e.g., `dist/`).                |
+| `--remove-exclude` | `-r`  | Removes a path or pattern from the exclusion list.                           |
+| `--use-gitignore`  |       | Sets whether to use the `.gitignore` file (`true` or `false`).               |
+| `--reset`          |       | **Destructive.** Resets the configuration to defaults before applying flags. |
+| `--init`           |       | Updates the config file but does not generate the context.                   |
+| `--output`         | `-o`  | Sets the name of the output file (e.g., `project-context.md`).               |
+| `--help`           | `-h`  | Displays the help menu with all available commands.                          |
 
 
 ## Documentation
 
-**For detailed usage, configuration, and examples, please visit our full [documentation website](https://docs.mgks.dev/create-context/).**.
+**For detailed usage, configuration, and examples, please visit our full [documentation website](https://docs.mgks.dev/ai-context/).**
+
+**[GitHub Sponsors](https://github.com/sponsors/mgks): Become a monthly or one-time GitHub sponsor to support aiContext & other projects developed by [@mgks](https://mgks.dev).**
