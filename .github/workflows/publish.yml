@@ -1,12 +1,17 @@
-name: Publish to NPM
+name: Publish to NPM and GitHub Packages
 
 on:
   release:
-    types: [created]
+    types: [created] # Triggers when a new GitHub Release is created
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Add permissions for writing to GitHub Packages
+    permissions:
+      contents: read
+      packages: write 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -14,13 +19,35 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '20.x' # Use a stable LTS version
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Publish to NPM
+      # --- 1. Publish to NPM Registry (the public one) ---
+      - name: Configure Node.js for npmjs.com
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org/'
+      
+      - name: Publish to NPM Registry
         run: npm publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # --- 2. Publish to GitHub Packages (the private one) ---
+      - name: Configure Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://npm.pkg.github.com'
+          # This scope is important for authentication with GPR
+          scope: '@mgks' 
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          # Use the built-in GITHUB_TOKEN for authentication with GPR
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
