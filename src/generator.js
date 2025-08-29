@@ -16,6 +16,21 @@ function formatFileSize(sizeInKB) { if (sizeInKB < 0.01 && sizeInKB > 0) return 
 function formatNumber(num) { return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 
 /**
+ * Scans a string of text to find the longest consecutive sequence of backticks.
+ * @param {string} content The text content to scan.
+ * @returns {number} The length of the longest backtick sequence found.
+ */
+function getLongestBacktickSequence(content) {
+    // Use a regular expression to find all sequences of backticks
+    const matches = content.match(/`+/g) || [];
+    if (matches.length === 0) {
+        return 0; // No backticks in the content
+    }
+    // Find the length of the longest sequence from all matches
+    return Math.max(...matches.map(match => match.length));
+}
+
+/**
  * Reads the .gitignore file from the project root and parses it into exclusion patterns.
  * This is a simplified parser that handles comments and basic file/directory patterns.
  * @returns {string[]} An array of patterns to be excluded.
@@ -45,59 +60,67 @@ function parseGitignore() {
 }
 
 /**
- * Executes the `find` command to locate all relevant files based on configuration.
- * @param {object} config The configuration object.
+ * Executes one or more `find` commands to locate all relevant files.
+ * This function uses a two-pass approach for maximum reliability:
+ * 1. Find all explicitly included paths (including hidden ones).
+ * 2. Find all regular paths (non-hidden and not excluded).
+ * It then merges the results.
+ * @param {object} config The final configuration object.
  * @param {boolean} debug If true, logs the generated find command.
  * @returns {Promise<string[]>} A promise that resolves to an array of file paths.
  */
 async function findRelevantFiles(config, debug = false) {
-    // Start with finding all files, then apply exclusion filters.
-    let findCommandParts = ["find . -type f"];
+    // This function runs a shell command that may contain multiple find commands.
+    const commands = [];
 
-    const notPaths = [];
-    const notNames = [];
-
-    // Process all exclusion patterns from the configuration.
-    config.excludePaths.forEach(p => {
-        const pattern = p.replace(/'/g, "'\\''"); // Basic shell escaping for patterns.
-        if (pattern.endsWith('/')) {
-            // Exclude a directory and all its contents, e.g., 'build/' -> -path '*/build/*'
-            notPaths.push(`-path '*/${pattern.slice(0, -1)}/*'`);
-        } else if (pattern.startsWith('*.')) {
-            // Exclude by a glob name pattern, e.g., '*.log' -> -name '*.log'
-            notNames.push(`-name '${pattern}'`);
-        } else {
-            // Exclude a specific file or directory name anywhere in the tree.
-            notNames.push(`-name '${pattern}'`);
-            notPaths.push(`-path '*/${pattern}/*'`);
-        }
-    });
-
-    if (notNames.length > 0) {
-        findCommandParts.push(`-not \\( ${notNames.join(' -o ')} \\)`);
-    }
-    if (notPaths.length > 0) {
-        findCommandParts.push(`-not \\( ${notPaths.join(' -o ')} \\)`);
+    // --- Command 1: Find EXPLICITLY INCLUDED files ---
+    // This command finds everything within the paths specified in `includePaths`.
+    // It is simple and powerful, correctly grabbing hidden files if they are included.
+    const includePaths = config.includePaths || [];
+    if (includePaths.length > 0) {
+        const paths = includePaths.map(p => `./${p.replace(/^\.\//, '')}`).join(' ');
+        commands.push(`find ${paths} -type f`);
     }
 
-    // Explicitly ignore all hidden files and directories (e.g., .git, .vscode)
-    findCommandParts.push(`-not -path '*/.*/*' -not -name '.*'`);
+    // --- Command 2: Find REGULAR files ---
+    // This command finds all non-hidden files that are not explicitly excluded.
+    let effectiveExcludePaths = [...(config.excludePaths || [])];
+    if (config.useGitignore) {
+        const gitignorePatterns = parseGitignore();
+        effectiveExcludePaths = [...new Set([...effectiveExcludePaths, ...gitignorePatterns])];
+    }
     
-    findCommandParts.push("| sort");
-    const findCommand = findCommandParts.join(' ');
+    let regularFilesCommand = "find . -type f -not -path '*/.*/*'";
+
+    if (effectiveExcludePaths.length > 0) {
+        const excludeConditions = effectiveExcludePaths.map(p => {
+            const pattern = p.replace(/'/g, "'\\''");
+            if (pattern.endsWith('/')) return `-path '*/${pattern}*'`;
+            if (pattern.startsWith('*.')) return `-name '${pattern}'`;
+            return `\\( -name '${pattern}' -o -path '*/${pattern}/*' \\)`;
+        }).join(' -o ');
+        regularFilesCommand += ` -a -not \\( ${excludeConditions} \\)`;
+    }
+    commands.push(regularFilesCommand);
+
+    // --- Combine, Execute, and Deduplicate ---
+    // We join commands with ';', pipe to sort, and then pipe to uniq to remove duplicates.
+    const finalCommand = commands.join('; ');
 
     if (debug) {
-        console.log("DEBUG: Running find command:");
-        console.log(findCommand);
+        console.log("DEBUG: Running final shell command:");
+        console.log(finalCommand);
     }
-    
+
     return new Promise((resolve) => {
-        exec(findCommand, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+        // We wrap the command in a subshell `sh -c "..."` to handle multiple commands.
+        // The output is piped to `sort | uniq` to merge and deduplicate results.
+        exec(`${finalCommand} | sort -u`, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
             if (debug && stderr && stderr.trim().length > 0) {
                 console.warn("DEBUG: `find` command STDERR:", stderr.trim());
             }
             if (error) {
-                console.error(`\n❌ Error executing find command (exit code ${error.code}). This may be due to missing paths or permissions.`);
+                console.error(`\n❌ Error executing find command (exit code ${error.code}).`);
                 resolve([]);
                 return;
             }
@@ -136,9 +159,21 @@ async function generateContextFile(config, debug = false) {
   }
   console.log(`   Processing ${filesToProcess.length} files...`);
 
+  // This custom sort function prioritizes './README.md' to the top of the list.
+  filesToProcess.sort((a, b) => {
+      const aIsReadme = path.basename(a).toLowerCase() === 'readme.md';
+      const bIsReadme = path.basename(b).toLowerCase() === 'readme.md';
+
+      if (aIsReadme && !bIsReadme) return -1; // a comes first
+      if (!aIsReadme && bIsReadme) return 1;  // b comes first
+      return a.localeCompare(b); // alphabetical for all others
+  });
+
   const stats = { totalFilesFound: initialFiles.length, totalFilesProcessed: filesToProcess.length, includedFileContents: 0, skippedDueToSize: 0, skippedOther: 0, totalTokens: 0, totalOriginalSizeKB: 0 };
+
   const projectName = path.basename(process.cwd());
-  let outputContent = `# Project Context: ${projectName}\n\nGenerated: ${new Date().toISOString()}\n\n`;
+
+  let outputContent = `# Project Context: ${projectName}\n\nGenerated: ${new Date().toISOString()} w/ @mgks/aiContext\n\n`;
   outputContent += `## Configuration Used\n\n\`\`\`json\n${JSON.stringify({ presets: config.presets, outputFile: config.outputFile, maxFileSizeKB: config.maxFileSizeKB }, null, 2)}\n\`\`\`\n\n`;
   outputContent += `## Directory Structure\n\n\`\`\`\n${generateTreeStructure(filesToProcess)}\`\`\`\n\n`;
   outputContent += `## File Contents\n\n`;
@@ -158,7 +193,16 @@ async function generateContextFile(config, debug = false) {
       const language = getLanguageFromExt(filePath);
       stats.includedFileContents++;
       stats.totalTokens += estimateTokenCount(fileContent);
-      outputContent += `### \`${filePath}\`\n\n\`\`\`${language}\n${fileContent.trim() ? fileContent : '[EMPTY FILE]'}\n\`\`\`\n\n`;
+
+      // We find the longest sequence in the content and add one.
+      // We ensure a minimum of 4 for consistency and to handle the common case well.
+      const longestSequence = getLongestBacktickSequence(fileContent);
+      const fenceLength = Math.max(4, longestSequence + 1);
+      const fence = '`'.repeat(fenceLength);
+
+      // Construct the output with the dynamic fence.
+      outputContent += `### \`${filePath}\`\n\n${fence}${language}\n${fileContent.trim() ? fileContent : '[EMPTY FILE]'}\n${fence}\n\n`;
+
     } catch (error) {
       stats.skippedOther++;
       outputContent += `### \`${filePath}\`\n\n*Error reading file: ${error.message}*\n\n`;

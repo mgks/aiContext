@@ -10,6 +10,7 @@ const BASE_CONFIG = {
     '.git/', '.github/', 'dist/', 'build/', '.gradle/', '.idea/',
     '*.log', '*.lock', 'LICENSE', 'yarn.lock', 'package-lock.json',
   ],
+  includePaths: [],
   includeExtensions: [
     '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss',
     '.json', '.md', '.txt', '.yml', '.yaml',

@@ -71,6 +71,12 @@ function applyCliModifications(currentConfig, argv) {
     newConfig.useGitignore = argv.useGitignore;
     modified = true;
   }
+
+  // Handle include paths additions.
+  if (argv.include) {
+    newConfig.includePaths = mergeUnique(newConfig.includePaths || [], argv.include);
+    modified = true;
+  }
   
   return { config: newConfig, modified };
 }
@@ -81,6 +87,15 @@ function applyCliModifications(currentConfig, argv) {
 async function run() {
   const argv = yargs(hideBin(process.argv))
     .usage('Usage: $0 [options]\n\nCreates a comprehensive context file for AI assistants.')
+    .option('reset', {
+        describe: 'Reset configuration to base defaults before applying other flags.',
+        type: 'boolean',
+    })
+    .option('include', {
+      alias: 'i',
+      describe: 'Force inclusion of specific paths, even if they are hidden.',
+      type: 'array',
+    })
     .option('preset', {
       alias: 'p',
       describe: 'Apply one or more presets (e.g., -p nodejs android). Updates config file.',
@@ -130,20 +145,25 @@ async function run() {
     .argv;
 
   let config = loadConfig();
+
+  if (argv.reset) {
+      console.log("🔄 Resetting configuration to defaults...");
+      config = null; // Setting config to null will trigger the creation of a fresh config file.
+  }
+
   // Determine if the user provided any CLI arguments that modify the configuration.
-  const hasCliModifiers = argv.preset || argv.addExclude || argv.removeExclude || argv.addExt || argv.removeExt || argv.output || argv.maxSize;
+  const hasCliModifiers = argv.preset || argv.addExclude || argv.removeExclude || argv.addExt || argv.removeExt || argv.output || argv.maxSize || argv.useGitignore || argv.include;
 
   if (config === null) {
-      console.log("No `aicontext.json` found. Using default configuration.");
-      // Create a fresh copy of the base config to start with.
+      console.log("...Initializing new configuration.");
       config = JSON.parse(JSON.stringify(BASE_CONFIG));
   }
   
-  if (hasCliModifiers) {
+  if (hasCliModifiers || argv.reset) {
     const { config: newConfig, modified } = applyCliModifications(config, argv);
-    if (modified) {
+    if (modified || argv.reset) {
       saveConfig(newConfig);
-      config = newConfig; // Ensure the current run uses the updated config.
+      config = newConfig;
     }
   }
 
