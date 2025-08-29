@@ -1,7 +1,10 @@
 # aiContext
 
-[![NPM Version](https://img.shields.io/npm/v/aicontext.svg)](https://www.npmjs.com/package/aicontext)
-[![License](https://img.shields.io/npm/l/aicontext.svg)](https://github.com/mgks/aiContext/blob/main/LICENSE)
+<p>
+  <a href="https://www.npmjs.com/package/@mgks/aicontext"><img src="https://img.shields.io/npm/v/@mgks/aicontext.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@mgks/aicontext"><img src="https://img.shields.io/npm/d18m/@mgks/aicontext.svg" alt="npm downloads"></a>
+  <a href="https://github.com/mgks/aiContext/blob/main/LICENSE"><img src="https://img.shields.io/github/license/mgks/aiContext.svg" alt="license"></a>
+</p>
 
 A powerful CLI tool for generating high-signal, optimized code context for AI assistants and automated systems.
 
