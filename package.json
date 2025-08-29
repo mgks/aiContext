@@ -1,5 +1,5 @@
 {
-  "name": "aicontext",
+  "name": "@mgks/aicontext",
   "version": "0.1.0",
   "description": "The CLI for generating high-signal, optimized code context for AI assistants and automation. Create project context for GPT, Claude, and more.",
   "main": "src/main.js",

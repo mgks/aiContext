@@ -18,17 +18,21 @@ A powerful CLI tool for generating high-signal, optimized code context for AI as
 
 ## Quick Start
 
-Run this command in your project's root directory to get started. It will create a `aicontext.json` config file and then generate the context.
-
-Install it globally for easier access:
+Run this command in your project's root directory to get started. It will create a `aicontext.json` config file and then generate the context instantly.
 
 ```bash
-npm install -g aicontext
+npx @mgks/aicontext -p nodejs
+```
+
+**Recommended:** Install it globally for easier access:
+
+```bash
+npm install -g @mgks/aicontext
 ```
 
 ## Usage
 
-Run the tool from the root of your project directory.
+After global installation, you can use the simple aicontext command anywhere on your system.
 
 ```bash
 # Run with the default Node.js preset
